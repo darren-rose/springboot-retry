@@ -1,8 +1,12 @@
 package com.example.retry;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.http.MediaType;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.annotation.Recover;
@@ -30,8 +34,8 @@ class Rest {
 
     @Autowired RetryService retryService;
 
-    @GetMapping("/hello")
-    public String hello(){
+    @GetMapping(value = "/hello", produces = MediaType.APPLICATION_JSON_VALUE)
+    public SomeModel hello(){
         LOGGER.info("hello");
         return retryService.serviceCall();
     }
@@ -44,21 +48,29 @@ class RetryService {
 
     private int calls;
 
-    @Retryable(maxAttempts = 5, backoff = @Backoff(delay = 100, multiplier = 2.0, maxDelay = 1000))
-    public String serviceCall(){
+    @Retryable(value = {IllegalArgumentException.class}, maxAttempts = 5, backoff = @Backoff(delay = 100, multiplier = 2.0, maxDelay = 1000))
+    public SomeModel serviceCall(){
         LOGGER.info("serviceCall " + LocalDateTime.now());
-        if(calls<5){
+        if(calls<4){
             calls++;
             LOGGER.info("serviceCall failed");
-            throw new IllegalArgumentException("fail 4 times");
+            throw new IllegalArgumentException("failed");
         }
-        return "serviceCall";
+        return new SomeModel("somthing", 666);
     }
 
-    @Recover
-    public String recovery(){
+    @Recover()
+    public String recovery(IllegalArgumentException ie){
         LOGGER.info("recovery");
         return "recoveryValue";
     }
 
+}
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+class SomeModel {
+    private String some;
+    private int other;
 }
